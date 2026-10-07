@@ -15,9 +15,9 @@ The app displays a setup notice when the App ID is absent. The App ID is require
 
 ## How wallet verification works
 
-Privy wallet login authenticates the user. The studio then asks for a second, explicit `personal_sign` signature with a random nonce, timestamp, wallet address, and site origin. `viem` checks that signature locally against the selected wallet. No transaction, approval, delegation, or gas is involved. Verification state lives only in the current page session. The app does **not** use this local check as server authorization; if private APIs or persistent cloud profiles are added, verify Privy access tokens and wallet identity on the server.
+Privy wallet login authenticates the user. The studio then asks for a second, explicit `personal_sign` signature with a random nonce, timestamp, wallet address, and site origin. `viem` checks ordinary wallet signatures locally and falls back to Robinhood Chain verification for smart wallets. No transaction, approval, delegation, or gas is involved. Verification state lives only in the current page session. The app does **not** use this local check as server authorization; if private APIs or persistent cloud profiles are added, verify Privy access tokens and wallet identity on the server.
 
-The selected wallet's Muses are read from `GET https://musegod.org/api/v1/muses?owner=...`, with pagination. Detail views use `GET /api/v1/muses/{id}` and the official `/muse/{id}.txt` adoption prompt. The UI distinguishes an empty collection from an API error. Ownership can be delayed by the official API's roughly one-minute cache. Personal agent notes are stored in this browser's `localStorage`, keyed by wallet and muse ID; they do not sync across devices or update the NFT.
+The selected wallet's Muses are read from `GET https://musegod.org/api/v1/muses?owner=...`, with pagination. Detail views use `GET /api/v1/muses/{id}` and the official `/muse/{id}.txt` adoption prompt. The UI distinguishes an empty collection from an API error. Ownership can be delayed by the official API's roughly one-minute cache. Agent missions, working styles, and private notes are stored in this browser's `localStorage`, keyed by wallet and muse ID; they do not sync across devices or update the NFT.
 
 ## Use an NFT as an agent
 
@@ -25,7 +25,7 @@ The selected wallet's Muses are read from `GET https://musegod.org/api/v1/muses?
 2. Open **My muses** and choose a character.
 3. Read its onchain soul and traits.
 4. Press **Copy agent prompt** and paste it as the opening instruction in ChatGPT, Claude, or a compatible agent tool.
-5. Give the character a concrete task. For a programmatic agent, use the public `/muse/<id>.txt` prompt or `/muse/<id>.json` registration file documented by MUSEGOD.
+5. Set a mission and working style in the Agent Workspace, save it, then use **Copy with mission** to combine your task with the official prompt. For a programmatic agent, use the public `/muse/<id>.txt` prompt or `/muse/<id>.json` registration file documented by MUSEGOD.
 
 Copying a prompt gives the AI a character. It does not grant access to the NFT, wallet, or private keys. The official [MUSEGOD agents guide](https://musegod.org/docs) explains ERC-8004 identity and its onchain SOUL.md record.
 

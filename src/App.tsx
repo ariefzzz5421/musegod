@@ -69,7 +69,13 @@ function ConnectedApp() {
       const issued = new Date().toISOString()
       const message = `MUSEGOD Agent Studio\n\nVerify that I control ${address}.\nOrigin: ${window.location.origin}\nNonce: ${nonce}\nIssued at: ${issued}\n\nThis signature is free and does not authorize a transaction or agent access.`
       const { signature } = await signMessage({ message }, { address })
-      const valid = await verifyMessage({ address: address as `0x${string}`, message, signature: signature as `0x${string}` })
+      const proof = { address: address as `0x${string}`, message, signature: signature as `0x${string}` }
+      let valid = false
+      try { valid = await verifyMessage(proof) } catch { /* Contract wallets need chain verification. */ }
+      if (!valid) {
+        const { verifySmartWallet } = await import('./smartWallet')
+        valid = await verifySmartWallet(proof)
+      }
       if (!valid) throw new Error('Signature did not match this wallet. Try again.')
       setVerification({ address, verifiedAt: Date.now() })
       setScreen('collection')
@@ -168,6 +174,8 @@ function Collection({ address, wallets, walletIndex, setWalletIndex, muses, load
   const [search, setSearch] = useState('')
   const [copied, setCopied] = useState(false)
   const [notes, setNotes] = useState('')
+  const [mission, setMission] = useState('')
+  const [style, setStyle] = useState('Balanced')
   const [saved, setSaved] = useState(false)
 
   useEffect(() => { setSelectedId(muses[0]?.id ?? null) }, [address, muses])
@@ -183,20 +191,31 @@ function Collection({ address, wallets, walletIndex, setWalletIndex, muses, load
     }).catch((error: Error) => { if (!controller.signal.aborted) setDetailError(error.message) }).finally(() => { if (!controller.signal.aborted) setDetailLoading(false) })
     return () => controller.abort()
   }, [selectedId, address])
-  useEffect(() => { setNotes(selectedId ? localStorage.getItem(`musegod:notes:${address.toLowerCase()}:${selectedId}`) ?? '' : ''); setSaved(false) }, [address, selectedId])
+  useEffect(() => {
+    const key = `${address.toLowerCase()}:${selectedId}`
+    setNotes(selectedId ? localStorage.getItem(`musegod:notes:${key}`) ?? '' : '')
+    setMission(selectedId ? localStorage.getItem(`musegod:mission:${key}`) ?? '' : '')
+    setStyle(selectedId ? localStorage.getItem(`musegod:style:${key}`) ?? 'Balanced' : 'Balanced')
+    setSaved(false)
+  }, [address, selectedId])
   const visibleMuses = useMemo(() => muses.filter((muse) => `${muse.name} ${muse.id} ${muse.tier}`.toLowerCase().includes(search.toLowerCase())), [muses, search])
-  async function copyPrompt() {
+  async function copyPrompt(withMission = false) {
     if (!detail) return
     try {
       const response = await fetch(safeMuseUrl(detail.links?.prompt, `${SITE}/muse/${detail.id}.txt`))
       if (!response.ok) throw new Error(`Prompt returned ${response.status}`)
-      await navigator.clipboard.writeText(await response.text())
+      const officialPrompt = await response.text()
+      const brief = withMission ? `${officialPrompt}\n\n## My task for this muse\n${mission.trim() || 'Help me brainstorm and plan.'}\n\n## Working style\n${style}\n\nKeep the muse's original values and boundaries.` : officialPrompt
+      await navigator.clipboard.writeText(brief)
       setCopied(true); window.setTimeout(() => setCopied(false), 2500)
     } catch { setDetailError('Could not copy the prompt. Open it on MUSEGOD instead.') }
   }
   function saveNotes() {
     if (!selectedId) return
-    localStorage.setItem(`musegod:notes:${address.toLowerCase()}:${selectedId}`, notes)
+    const key = `${address.toLowerCase()}:${selectedId}`
+    localStorage.setItem(`musegod:notes:${key}`, notes)
+    localStorage.setItem(`musegod:mission:${key}`, mission)
+    localStorage.setItem(`musegod:style:${key}`, style)
     setSaved(true)
   }
 
@@ -204,7 +223,7 @@ function Collection({ address, wallets, walletIndex, setWalletIndex, muses, load
     <div className="profile-strip"><div className="profile-avatar"><Wallet size={23} /></div><div className="profile-address"><span>CONNECTED WALLET</span><strong>{shortAddress(address)}</strong></div><div className="profile-stat"><strong>{loading ? '…' : error ? '—' : muses.length}</strong><span>MUSES OWNED</span></div><div className="profile-stat"><strong>4663</strong><span>ROBINHOOD CHAIN</span></div>{wallets.length > 1 && <label className="wallet-switch">Wallet <select value={walletIndex} onChange={(event) => setWalletIndex(Number(event.target.value))}>{wallets.map((item, index) => <option key={`${item}-${index}`} value={index}>{shortAddress(item)}</option>)}</select><ChevronDown size={14} /></label>}</div>
     {error ? <div className="state-panel error-panel" role="alert"><CircleHelp size={24} /><div><strong>Collection unavailable</strong><p>{error} Your NFTs have not been assumed empty.</p></div><button className="button button-outline" onClick={onRefresh}>Retry</button></div> : loading ? <div className="state-panel"><LoaderCircle size={24} className="spin" /><div><strong>Finding your muses…</strong><p>Reading current ownership from MUSEGOD.</p></div></div> : muses.length === 0 ? <div className="state-panel empty-panel"><Sparkles size={26} /><div><strong>No MUSEGOD NFTs found in this wallet</strong><p>Check that you connected the wallet holding them. Ownership data may update within about a minute.</p><a href={`${SITE}/muses`} target="_blank" rel="noreferrer">Explore the collection <ArrowRight size={15} /></a></div></div> :
       <div className="studio-grid"><div className="studio-list"><div className="list-header"><div><span className="section-kicker">YOUR COLLECTION</span><h2>{muses.length} {muses.length === 1 ? 'muse' : 'muses'} in your care</h2></div></div><label className="search-box"><span className="sr-only">Search your muses</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name, number, or tier…" /></label><div className="muse-list">{visibleMuses.map((muse) => <button key={muse.id} className={`muse-list-card ${selectedId === muse.id ? 'selected' : ''}`} onClick={() => setSelectedId(muse.id)}><img src={`${SITE}/muse/art/480/${muse.id}.jpg?v=2`} alt={muse.name} loading="lazy" /><span className="muse-card-text"><small>{muse.tier.toUpperCase()} · #{String(muse.id).padStart(3, '0')}</small><strong>{muse.name}</strong><span>{muse.traits?.['Patron Muse'] ? `Muse of ${muse.traits['Patron Muse']}` : `Rank #${muse.rank}`}</span></span><ChevronRight size={19} /></button>)}{visibleMuses.length === 0 && <div className="list-empty">No muse matches “{search}”.</div>}</div><div className="source-note"><Globe2 size={15} /> Live ownership from <a href={`${SITE}/docs`} target="_blank" rel="noreferrer">musegod.org</a> · refresh to check transfers</div></div>
-      <div className="detail-panel">{detailLoading ? <div className="detail-state"><LoaderCircle className="spin" size={28} />Loading this muse's soul…</div> : detailError && !detail ? <div className="detail-state error-panel" role="alert">{detailError}</div> : detail ? <><div className="detail-hero"><img src={`${SITE}/muse/art/960/${detail.id}.jpg?v=2`} alt={detail.name} /><div className="detail-hero-overlay"><span>{detail.tier.toUpperCase()} · RANK #{detail.rank}</span><h2>{detail.name}</h2><span>MUSE #{String(detail.id).padStart(3, '0')}</span></div></div><div className="detail-body"><div className="detail-heading"><div><span className="section-kicker">YOUR MUSE, YOUR AGENT</span><h3>Meet {detail.name}.</h3></div><span className="agent-tag"><Sparkles size={14} /> Agent #{detail.agent?.agentId ?? '—'}</span></div><p className="muse-intro">{detail.soul?.intro ?? 'This muse has an onchain character to explore.'}</p><div className="trait-row">{Object.entries(detail.traits ?? {}).filter(([key]) => ['Species', 'Patron Muse', 'Expression', 'Title'].includes(key)).slice(0, 3).map(([key, value]) => <span key={key}><small>{key}</small>{value}</span>)}</div><div className="soul-box"><div><BookOpen size={18} /><strong>From the soul</strong><span>{detail.soul?.source === 'chain' ? 'ONCHAIN' : 'SOURCE: MUSEGOD'}</span></div><p>{detail.soul?.help ?? detail.soul?.line ?? 'Open the full soul to discover this character.'}</p></div><div className="agent-actions"><button className="button button-gold" onClick={copyPrompt}>{copied ? <Check size={17} /> : <Copy size={17} />}{copied ? 'Copied prompt' : 'Copy agent prompt'}</button><a className="button button-outline" href={safeMuseUrl(detail.links?.page, `${SITE}/muse/${detail.id}`)} target="_blank" rel="noreferrer">Full muse profile <ExternalLink size={16} /></a></div>{detailError && <p className="inline-error" role="alert">{detailError}</p>}<p className="action-hint">Paste the prompt into ChatGPT, Claude, or another AI to chat in this muse's voice.</p><div className="agent-links"><a href={`${SITE}/m/${detail.id}/agent`} target="_blank" rel="noreferrer">Official agent tools <ExternalLink size={14} /></a><a href={`${SITE}/m/${detail.id}/flock`} target="_blank" rel="noreferrer">Join the Flock <ExternalLink size={14} /></a></div><div className="notes-area"><div><strong>My agent notes</strong><span>Saved only in this browser for this wallet and muse.</span></div><textarea value={notes} onChange={(event) => { setNotes(event.target.value); setSaved(false) }} placeholder="Ideas, tasks, and ways you want to use this muse…" rows={4} maxLength={3000} /><button className="button button-outline" onClick={saveNotes}>{saved ? <Check size={16} /> : null}{saved ? 'Saved locally' : 'Save notes'}</button></div></div></> : <div className="detail-state">Choose a muse to see its soul.</div>}</div></div>}
+      <div className="detail-panel">{detailLoading ? <div className="detail-state"><LoaderCircle className="spin" size={28} />Loading this muse's soul…</div> : detailError && !detail ? <div className="detail-state error-panel" role="alert">{detailError}</div> : detail ? <><div className="detail-hero"><img src={`${SITE}/muse/art/960/${detail.id}.jpg?v=2`} alt={detail.name} /><div className="detail-hero-overlay"><span>{detail.tier.toUpperCase()} · RANK #{detail.rank}</span><h2>{detail.name}</h2><span>MUSE #{String(detail.id).padStart(3, '0')}</span></div></div><div className="detail-body"><div className="detail-heading"><div><span className="section-kicker">YOUR MUSE, YOUR AGENT</span><h3>Meet {detail.name}.</h3></div><span className="agent-tag"><Sparkles size={14} /> Agent #{detail.agent?.agentId ?? '—'}</span></div><p className="muse-intro">{detail.soul?.intro ?? 'This muse has an onchain character to explore.'}</p><div className="trait-row">{Object.entries(detail.traits ?? {}).filter(([key]) => ['Species', 'Patron Muse', 'Expression', 'Title'].includes(key)).slice(0, 3).map(([key, value]) => <span key={key}><small>{key}</small>{value}</span>)}</div><div className="soul-box"><div><BookOpen size={18} /><strong>From the soul</strong><span>{detail.soul?.source === 'chain' ? 'ONCHAIN' : 'SOURCE: MUSEGOD'}</span></div><p>{detail.soul?.help ?? detail.soul?.line ?? 'Open the full soul to discover this character.'}</p></div><div className="agent-actions"><button className="button button-gold" onClick={() => void copyPrompt()}>{copied ? <Check size={17} /> : <Copy size={17} />}{copied ? 'Copied prompt' : 'Copy agent prompt'}</button><a className="button button-outline" href={safeMuseUrl(detail.links?.page, `${SITE}/muse/${detail.id}`)} target="_blank" rel="noreferrer">Full muse profile <ExternalLink size={16} /></a></div>{detailError && <p className="inline-error" role="alert">{detailError}</p>}<p className="action-hint">Paste the prompt into ChatGPT, Claude, or another AI to chat in this muse's voice.</p><div className="agent-links"><a href={`${SITE}/m/${detail.id}/agent`} target="_blank" rel="noreferrer">Official agent tools <ExternalLink size={14} /></a><a href={`${SITE}/m/${detail.id}/flock`} target="_blank" rel="noreferrer">Join the Flock <ExternalLink size={14} /></a></div><div className="notes-area"><div><strong>Agent workspace</strong><span>Mission, style, and notes are saved only in this browser.</span></div><label className="workspace-field">Mission<textarea value={mission} onChange={(event) => { setMission(event.target.value); setSaved(false) }} placeholder="What should this muse help you do?" rows={3} maxLength={3000} /></label><label className="workspace-field">Working style<select value={style} onChange={(event) => { setStyle(event.target.value); setSaved(false) }}><option>Balanced</option><option>Concise</option><option>Creative</option><option>Detailed</option></select></label><label className="workspace-field">Private notes<textarea value={notes} onChange={(event) => { setNotes(event.target.value); setSaved(false) }} placeholder="Ideas, tasks, and ways you want to use this muse…" rows={4} maxLength={3000} /></label><div className="workspace-actions"><button className="button button-outline" onClick={saveNotes}>{saved ? <Check size={16} /> : null}{saved ? 'Saved locally' : 'Save workspace'}</button><button className="button button-gold" onClick={() => void copyPrompt(true)}><Copy size={16} /> Copy with mission</button></div></div></div></> : <div className="detail-state">Choose a muse to see its soul.</div>}</div></div>}
   </section>
 }
 
