@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { PrivyProvider } from '@privy-io/react-auth'
 import App from './App'
 import './styles.css'
+import './newPages.css'
 
 const appId = import.meta.env.VITE_PRIVY_APP_ID?.trim()
 

@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/my-muses", "destination": "/index.html" },
+    { "source": "/how-it-works", "destination": "/index.html" },
+    { "source": "/utilize", "destination": "/index.html" },
+    { "source": "/musegod", "destination": "/index.html" }
+  ]
+}

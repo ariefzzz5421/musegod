@@ -40,3 +40,10 @@ Copying a prompt gives the AI a character. It does not grant access to the NFT, 
 - Privy message signing: <https://docs.privy.io/wallets/using-wallets/ethereum/sign-a-message>
 
 This project never asks for a seed phrase or private key and does not execute NFT or token transactions.
+
+## New pages
+
+- `/utilize` is the owner guide: connect and verify, read a muse's soul, copy its adoption prompt, reuse it in an AI tool, and follow the official Flock, Musebook, or Terrakin setup.
+- `/musegod` summarizes the token, NFT collection, and weekly muse pot. It fetches market, drop, collectors, offering, burns, and pot figures directly from the public official API when opened. Refresh is manual; missing endpoint data is marked `N/D` rather than estimated.
+
+The navigation uses browser history, so these pages support direct links and Back/Forward. `vercel.json` maps those paths to the static application entry point. Contract addresses and program descriptions come from the [official documentation](https://musegod.org/docs); changing market figures come from the [official market endpoint](https://musegod.org/api/v1/market). The independent site does not submit token or NFT transactions.

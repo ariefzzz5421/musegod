@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { usePrivy, useSignMessage, useWallets } from '@privy-io/react-auth'
 import { verifyMessage } from 'viem'
 import {
@@ -8,20 +8,38 @@ import {
   Wallet, X,
 } from 'lucide-react'
 import { fetchMuse, fetchOwnedMuses, MuseDetail, MuseSummary, safeMuseUrl, shortAddress, SITE } from './muse'
+import { pathFor, screenFromPath, type Screen } from './routes'
 
-type Screen = 'overview' | 'collection' | 'guide'
 type WalletState = { address: string; verifiedAt: number }
 
 const FEATURED = [536, 9, 453]
+const MusegodPage = lazy(() => import('./MusegodPage'))
+const UtilizePage = lazy(() => import('./UtilizePage'))
+const pageFallback = <section className="container route-loading"><LoaderCircle className="spin" size={22} /><span>Opening page…</span></section>
 
 function App({ configured }: { configured: boolean }) {
   return configured ? <ConnectedApp /> : <UnconfiguredApp />
 }
 
+function useScreen(): [Screen, (screen: Screen) => void] {
+  const [screen, updateScreen] = useState<Screen>(() => screenFromPath(window.location.pathname))
+  useEffect(() => {
+    const onPopState = () => updateScreen(screenFromPath(window.location.pathname))
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+  const setScreen = (next: Screen) => {
+    const path = pathFor(next)
+    if (window.location.pathname !== path) window.history.pushState(null, '', path)
+    updateScreen(next)
+  }
+  return [screen, setScreen]
+}
+
 function UnconfiguredApp() {
-  const [screen, setScreen] = useState<Screen>('overview')
+  const [screen, setScreen] = useScreen()
   return <Shell screen={screen} setScreen={setScreen} address={null} verified={false} onConnect={() => undefined} configured={false}>
-    {screen === 'guide' ? <Guide /> : screen === 'collection' ? <section className="verify-section container"><div className="verify-card"><div className="verify-icon"><KeyRound size={30} /></div><span className="section-kicker">SETUP REQUIRED</span><h1>Connect your wallet.</h1><p>Add the public Privy App ID to <code>VITE_PRIVY_APP_ID</code> and restart the site. Follow the steps in the README.</p></div></section> : <Overview onConnect={() => undefined} configured={false} />}
+    {screen === 'guide' ? <Guide /> : screen === 'utilize' ? <Suspense fallback={pageFallback}><UtilizePage hasWallet={false} onMyMuses={() => setScreen('collection')} /></Suspense> : screen === 'musegod' ? <Suspense fallback={pageFallback}><MusegodPage /></Suspense> : screen === 'collection' ? <section className="verify-section container"><div className="verify-card"><div className="verify-icon"><KeyRound size={30} /></div><span className="section-kicker">SETUP REQUIRED</span><h1>Connect your wallet.</h1><p>Add the public Privy App ID to <code>VITE_PRIVY_APP_ID</code> and restart the site. Follow the steps in the README.</p></div></section> : <Overview onConnect={() => undefined} configured={false} />}
   </Shell>
 }
 
@@ -29,7 +47,7 @@ function ConnectedApp() {
   const { ready, authenticated, login, logout } = usePrivy()
   const { wallets } = useWallets()
   const { signMessage } = useSignMessage()
-  const [screen, setScreen] = useState<Screen>('overview')
+  const [screen, setScreen] = useScreen()
   const [walletIndex, setWalletIndex] = useState(0)
   const [verification, setVerification] = useState<WalletState | null>(null)
   const [verifying, setVerifying] = useState(false)
@@ -101,6 +119,8 @@ function ConnectedApp() {
         <Collection address={address} wallets={wallets.map((item) => item.address)} walletIndex={walletIndex} setWalletIndex={setWalletIndex} muses={muses} loading={loading} error={loadError} onRefresh={() => setRefreshKey((value) => value + 1)} verifiedAt={verification?.verifiedAt ?? 0} />}
     </>}
     {screen === 'guide' && <Guide />}
+    {screen === 'utilize' && <Suspense fallback={pageFallback}><UtilizePage hasWallet={Boolean(address)} onMyMuses={() => setScreen('collection')} /></Suspense>}
+    {screen === 'musegod' && <Suspense fallback={pageFallback}><MusegodPage /></Suspense>}
   </Shell>
 }
 
@@ -118,6 +138,8 @@ function Shell({ children, screen, setScreen, address, verified, onConnect, onDi
           <button className={screen === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}>Overview</button>
           <button className={screen === 'collection' ? 'active' : ''} onClick={() => navigate('collection')}>My muses</button>
           <button className={screen === 'guide' ? 'active' : ''} onClick={() => navigate('guide')}>How it works</button>
+          <button className={screen === 'utilize' ? 'active' : ''} onClick={() => navigate('utilize')}>Utilize</button>
+          <button className={screen === 'musegod' ? 'active' : ''} onClick={() => navigate('musegod')}>Musegod</button>
         </nav>
         <div className="header-actions">
           {address ? <><div className="wallet-pill"><span className="live-dot" />{shortAddress(address)}{verified && <ShieldCheck size={15} aria-label="Verified" />}</div><button className="disconnect-button" onClick={onDisconnect} title="Disconnect wallet" aria-label="Disconnect wallet"><X size={16} /></button></> :
@@ -129,6 +151,8 @@ function Shell({ children, screen, setScreen, address, verified, onConnect, onDi
         <button onClick={() => navigate('overview')}>Overview <ChevronRight size={17} /></button>
         <button onClick={() => navigate('collection')}>My muses <ChevronRight size={17} /></button>
         <button onClick={() => navigate('guide')}>How it works <ChevronRight size={17} /></button>
+        <button onClick={() => navigate('utilize')}>Utilize <ChevronRight size={17} /></button>
+        <button onClick={() => navigate('musegod')}>Musegod <ChevronRight size={17} /></button>
         {address && <button onClick={() => { onDisconnect?.(); setMenuOpen(false) }}>Disconnect <X size={17} /></button>}
       </nav>}
     </header>
