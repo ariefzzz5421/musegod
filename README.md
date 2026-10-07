@@ -44,6 +44,8 @@ This project never asks for a seed phrase or private key and does not execute NF
 ## New pages
 
 - `/utilize` is the owner guide: connect and verify, read a muse's soul, copy its adoption prompt, reuse it in an AI tool, and follow the official Flock, Musebook, or Terrakin setup.
-- `/musegod` summarizes the token, NFT collection, and weekly muse pot. It fetches market, drop, collectors, offering, burns, and pot figures directly from the public official API when opened. Refresh is manual; missing endpoint data is marked `N/D` rather than estimated.
+- `/musegod` summarizes the token, NFT collection, and weekly muse pot. It fetches market, drop, collectors, offering, burns, pot, and sales figures directly from the public official API when opened. The Refresh button updates all sources; missing endpoint data is marked `N/D` rather than estimated.
+
+The Musegod page also shows the USD equivalent of all tokens burned at the latest available token price, the 5% NFT creator-royalty route, and the official burn and sale feeds. It refreshes those two feeds every minute while the tab is visible. The burn API caches about 15 seconds; the OpenSea-backed sales source reads at most once per minute. A sale does not prove its royalty was paid, so the feed does not attribute a specific burn or pot deposit to a specific sale. The USD equivalent is **not** historical USD spent on burns.
 
 The navigation uses browser history, so these pages support direct links and Back/Forward. `vercel.json` maps those paths to the static application entry point. Contract addresses and program descriptions come from the [official documentation](https://musegod.org/docs); changing market figures come from the [official market endpoint](https://musegod.org/api/v1/market). The independent site does not submit token or NFT transactions.
