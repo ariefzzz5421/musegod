@@ -1,0 +1,7 @@
+{
+  "indexes": [
+    { "collectionGroup": "watchlistItems", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "museId", "order": "ASCENDING" } ] },
+    { "collectionGroup": "researchReports", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "ownerId", "order": "ASCENDING" }, { "fieldPath": "museId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" } ] }
+  ],
+  "fieldOverrides": []
+}

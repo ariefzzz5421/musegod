@@ -15,6 +15,7 @@ type WalletState = { address: string; verifiedAt: number }
 const FEATURED = [536, 9, 453]
 const MusegodPage = lazy(() => import('./MusegodPage'))
 const UtilizePage = lazy(() => import('./UtilizePage'))
+const StudioPage = lazy(() => import('./StudioPage'))
 const pageFallback = <section className="container route-loading"><LoaderCircle className="spin" size={22} /><span>Opening page…</span></section>
 
 function App({ configured }: { configured: boolean }) {
@@ -39,12 +40,12 @@ function useScreen(): [Screen, (screen: Screen) => void] {
 function UnconfiguredApp() {
   const [screen, setScreen] = useScreen()
   return <Shell screen={screen} setScreen={setScreen} address={null} verified={false} onConnect={() => undefined} configured={false}>
-    {screen === 'guide' ? <Guide /> : screen === 'utilize' ? <Suspense fallback={pageFallback}><UtilizePage hasWallet={false} onMyMuses={() => setScreen('collection')} /></Suspense> : screen === 'musegod' ? <Suspense fallback={pageFallback}><MusegodPage /></Suspense> : screen === 'collection' ? <section className="verify-section container"><div className="verify-card"><div className="verify-icon"><KeyRound size={30} /></div><span className="section-kicker">SETUP REQUIRED</span><h1>Connect your wallet.</h1><p>Add the public Privy App ID to <code>VITE_PRIVY_APP_ID</code> and restart the site. Follow the steps in the README.</p></div></section> : <Overview onConnect={() => undefined} configured={false} />}
+    {screen === 'guide' ? <Guide /> : screen === 'utilize' ? <Suspense fallback={pageFallback}><UtilizePage hasWallet={false} onMyMuses={() => setScreen('collection')} /></Suspense> : screen === 'musegod' ? <Suspense fallback={pageFallback}><MusegodPage /></Suspense> : ['intelligence', 'identity', 'developer', 'agent'].includes(screen) ? <Suspense fallback={pageFallback}><StudioPage mode={screen as 'intelligence' | 'identity' | 'developer' | 'agent'} address={null} verified={false} muses={[]} /></Suspense> : screen === 'collection' ? <section className="verify-section container"><div className="verify-card"><div className="verify-icon"><KeyRound size={30} /></div><span className="section-kicker">SETUP REQUIRED</span><h1>Connect your wallet.</h1><p>Add the public Privy App ID to <code>VITE_PRIVY_APP_ID</code> and restart the site. Follow the steps in the README.</p></div></section> : <Overview onConnect={() => undefined} configured={false} />}
   </Shell>
 }
 
 function ConnectedApp() {
-  const { ready, authenticated, login, logout } = usePrivy()
+  const { ready, authenticated, login, logout, getAccessToken } = usePrivy()
   const { wallets } = useWallets()
   const { signMessage } = useSignMessage()
   const [screen, setScreen] = useScreen()
@@ -121,6 +122,7 @@ function ConnectedApp() {
     {screen === 'guide' && <Guide />}
     {screen === 'utilize' && <Suspense fallback={pageFallback}><UtilizePage hasWallet={Boolean(address)} onMyMuses={() => setScreen('collection')} /></Suspense>}
     {screen === 'musegod' && <Suspense fallback={pageFallback}><MusegodPage /></Suspense>}
+    {['intelligence', 'identity', 'developer', 'agent'].includes(screen) && <Suspense fallback={pageFallback}><StudioPage mode={screen as 'intelligence' | 'identity' | 'developer' | 'agent'} address={address} verified={verified} muses={muses} getAccessToken={getAccessToken} onConnect={login} /></Suspense>}
   </Shell>
 }
 
@@ -137,9 +139,11 @@ function Shell({ children, screen, setScreen, address, verified, onConnect, onDi
         <nav className="desktop-nav" aria-label="Main navigation">
           <button className={screen === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}>Overview</button>
           <button className={screen === 'collection' ? 'active' : ''} onClick={() => navigate('collection')}>My muses</button>
+          <button className={screen === 'intelligence' ? 'active' : ''} onClick={() => navigate('intelligence')}>Intelligence</button>
+          <button className={screen === 'identity' || screen === 'agent' || screen === 'developer' ? 'active' : ''} onClick={() => navigate('identity')}>Agent Identity</button>
           <button className={screen === 'guide' ? 'active' : ''} onClick={() => navigate('guide')}>How it works</button>
           <button className={screen === 'utilize' ? 'active' : ''} onClick={() => navigate('utilize')}>Utilize</button>
-          <button className={screen === 'musegod' ? 'active' : ''} onClick={() => navigate('musegod')}>Musegod</button>
+          <button className={screen === 'musegod' ? 'active' : ''} onClick={() => navigate('musegod')}>Musegod Analytics</button>
         </nav>
         <div className="header-actions">
           {address ? <><div className="wallet-pill"><span className="live-dot" />{shortAddress(address)}{verified && <ShieldCheck size={15} aria-label="Verified" />}</div><button className="disconnect-button" onClick={onDisconnect} title="Disconnect wallet" aria-label="Disconnect wallet"><X size={16} /></button></> :
@@ -150,9 +154,12 @@ function Shell({ children, screen, setScreen, address, verified, onConnect, onDi
       {menuOpen && <nav className="mobile-nav" aria-label="Mobile navigation">
         <button onClick={() => navigate('overview')}>Overview <ChevronRight size={17} /></button>
         <button onClick={() => navigate('collection')}>My muses <ChevronRight size={17} /></button>
+        <button onClick={() => navigate('intelligence')}>Intelligence <ChevronRight size={17} /></button>
+        <button onClick={() => navigate('musegod')}>Musegod Analytics <ChevronRight size={17} /></button>
+        <button onClick={() => navigate('identity')}>Agent Identity <ChevronRight size={17} /></button>
+        <button onClick={() => navigate('developer')}>Developer Tools <ChevronRight size={17} /></button>
         <button onClick={() => navigate('guide')}>How it works <ChevronRight size={17} /></button>
         <button onClick={() => navigate('utilize')}>Utilize <ChevronRight size={17} /></button>
-        <button onClick={() => navigate('musegod')}>Musegod <ChevronRight size={17} /></button>
         {address && <button onClick={() => { onDisconnect?.(); setMenuOpen(false) }}>Disconnect <X size={17} /></button>}
       </nav>}
     </header>

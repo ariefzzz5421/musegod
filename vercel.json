@@ -1,8 +1,15 @@
 {
+  "functions": {
+    "api/intelligence/research.js": { "maxDuration": 60 }
+  },
   "rewrites": [
     { "source": "/my-muses", "destination": "/index.html" },
     { "source": "/how-it-works", "destination": "/index.html" },
     { "source": "/utilize", "destination": "/index.html" },
-    { "source": "/musegod", "destination": "/index.html" }
+    { "source": "/musegod", "destination": "/index.html" },
+    { "source": "/intelligence", "destination": "/index.html" },
+    { "source": "/agent-identity", "destination": "/index.html" },
+    { "source": "/developer", "destination": "/index.html" },
+    { "source": "/agent/:museId", "destination": "/index.html" }
   ]
 }
