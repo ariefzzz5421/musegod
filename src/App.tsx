@@ -122,7 +122,7 @@ function ConnectedApp() {
     {screen === 'guide' && <Guide />}
     {screen === 'utilize' && <Suspense fallback={pageFallback}><UtilizePage hasWallet={Boolean(address)} onMyMuses={() => setScreen('collection')} /></Suspense>}
     {screen === 'musegod' && <Suspense fallback={pageFallback}><MusegodPage /></Suspense>}
-    {['intelligence', 'identity', 'developer', 'agent'].includes(screen) && <Suspense fallback={pageFallback}><StudioPage mode={screen as 'intelligence' | 'identity' | 'developer' | 'agent'} address={address} verified={verified} muses={muses} getAccessToken={getAccessToken} onConnect={login} /></Suspense>}
+    {['intelligence', 'identity', 'developer', 'agent'].includes(screen) && <Suspense fallback={pageFallback}><StudioPage mode={screen as 'intelligence' | 'identity' | 'developer' | 'agent'} address={address} verified={verified} muses={muses} currentChainId={wallet?.chainId ? String(wallet.chainId) : null} getAccessToken={getAccessToken} onConnect={login} /></Suspense>}
   </Shell>
 }
 
